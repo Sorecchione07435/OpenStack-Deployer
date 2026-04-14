@@ -26,13 +26,15 @@ public_network:
 
 # Specifies the physical interface that will be used for public network external bridge
 bridge:
+  CREATE_BRIDGES: yes
+
   PUBLIC_BRIDGE_INTERFACE: ""
   PUBLIC_BRIDGE: "br-ex"
   INTERNAL_BRIDGE: "br-internal"
 
 # Choose whether to install the Block Storage service (Cinder) (Yes or No)
 cinder:
-  INSTALL_CINDER: "no"
+  INSTALL_CINDER: no
   CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_NAME: ""
   CINDER_VOLUME_LVM_IMAGE_FILE_PATH: ""
   # Size of the file-based LVM image for Cinder volumes (in GB)

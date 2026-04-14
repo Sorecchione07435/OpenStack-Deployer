@@ -11,6 +11,9 @@ import shutil
 
 import json
 
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+openvswitch_interfaces_template_file = os.path.join(BASE_DIR, "templates/openvswitch_interfaces.tpl")
+
 neutron_conf="/etc/neutron/neutron.conf"
 conf_ml2="/etc/neutron/plugins/ml2/ml2_conf.ini"
 conf_openvswitch="/etc/neutron/plugins/ml2/openvswitch_agent.ini"
@@ -85,36 +88,21 @@ def conf_openvswitch_bridges(config):
 
     print()
 
-    bridges_interfaces_content = f"""auto lo
-iface lo inet loopback
+    with open(openvswitch_interfaces_template_file, "r") as f:
+        template = f.read()
 
-auto {public_iface}
-iface {public_iface} inet manual
-    pre-up ovs-vsctl --may-exist add-br {public_bridge}
-    pre-up ovs-vsctl --may-exist add-port {public_bridge} {public_iface}
-    up ip link set {public_iface} up
-    down ip link set {public_iface} down
-
-auto {public_bridge}
-iface {public_bridge} inet static
-    address {ip_address}
-    netmask {ip_address_netmask}
-    gateway {subnet_address_gateway}
-    dns-nameservers {subnet_address_dns_servers}
-    pre-up ovs-vsctl --may-exist add-br {public_bridge}
-    pre-up ovs-vsctl --may-exist add-port {public_bridge} {public_iface}
-    pre-up ip link set {public_iface} up
-    post-down ovs-vsctl --if-exists del-br {public_bridge}
-
-auto {internal_bridge}
-iface {internal_bridge} inet manual
-    pre-up ovs-vsctl --may-exist add-br {internal_bridge}
-    up ip link set {internal_bridge} up
-"""
-
+    bridges_interfaces_content = template.format(
+    public_iface=public_iface,
+    public_bridge=public_bridge,
+    ip_address=ip_address,
+    ip_address_netmask=ip_address_netmask,
+    subnet_address_gateway=subnet_address_gateway,
+    subnet_address_dns_servers=subnet_address_dns_servers,
+    internal_bridge=internal_bridge
+)
     with open(INTERFACES_FILE, "w") as f:
-            f.write(bridges_interfaces_content)
-
+        f.write(bridges_interfaces_content)
+    
     interfaces_dir = "/etc/network/interfaces.d/"
     backup_dir = "/root/net-backup"
     os.makedirs(backup_dir, exist_ok=True)
@@ -393,12 +381,15 @@ def create_networks(config):
 
 def run_setup_neutron(config):
      
+     config_openvswitch_bridges = get(config, "bridge.CREATE_BRIDGES", "no") == "yes"
+
      if not install_pkgs():
           return False
      
-     if not conf_openvswitch_bridges(config):
-          return False
-     
+     if config_openvswitch_bridges:
+        if not conf_openvswitch_bridges(config):
+            return False
+        
      if not conf_neutron(config):
           return False
      
@@ -411,4 +402,3 @@ def run_setup_neutron(config):
      print(f"\n{colors.GREEN}Neutron configured successfully!{colors.RESET}\n")
 
      return True
-

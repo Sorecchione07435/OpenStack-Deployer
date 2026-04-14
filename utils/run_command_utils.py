@@ -52,12 +52,12 @@ def run_command(
         except subprocess.CalledProcessError as e:
             # Exit code ignorato
             if ignore_exit_codes and e.returncode in ignore_exit_codes:
-                spinner.stop("WARNING", color="yellow")
+                spinner.stop("WARNING", color="yellow", width=80)
                 return True
 
             # Se non è l'ultimo tentativo → retry
             if attempt < retries:
-                spinner.stop("RETRY", color="yellow")
+                spinner.stop("RETRY", color="yellow", witdth=80)
                 time.sleep(delay)
                 attempt += 1
                 continue

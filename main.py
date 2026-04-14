@@ -78,10 +78,10 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 def cmd_generate_config(args):
-    src_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "template.conf")
-    dst_file = os.path.join(args.file, "template.conf") if os.path.isdir(args.file) else args.file
+    src_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "templates/conf_template.yaml")
+    dst_file = os.path.join(args.file, "templates/conf_template.yaml") if os.path.isdir(args.file) else args.file
     shutil.copy(src_file, dst_file)
-    print(f"Configuration file generated: {dst_file}")
+    print(f"Configuration file generated in '{dst_file}'")
 
 
 def cmd_deploy(args):

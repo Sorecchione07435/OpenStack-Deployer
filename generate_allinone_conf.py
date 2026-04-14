@@ -16,7 +16,7 @@ def generate_config_file():
     global config_file_path
     config_file_path = f"/root/openstack-config-{uuid.uuid4().hex}.yaml"
     script_dir = os.path.dirname(os.path.realpath(__file__))
-    src_file = os.path.join(script_dir, "template.yaml")
+    src_file = os.path.join(script_dir, "templates/conf_template.yaml")
     shutil.copy(src_file, config_file_path)
 
 def config_openstack(lvm_image_size_in_gb=None):
@@ -68,7 +68,6 @@ def config_openstack(lvm_image_size_in_gb=None):
     config_dict["cinder"]["INSTALL_CINDER"] = "yes"
     config_dict["cinder"]["CINDER_VOLUME_LVM_PHYSICAL_PV_LOOP_NAME"] = get_free_loop()
     config_dict["cinder"]["CINDER_VOLUME_LVM_IMAGE_FILE_PATH"] = "/var/lib/cinder/images/cinder-volumes.img"
-
 
     config_dict["cinder"]["CINDER_VOLUME_LVM_IMAGE_SIZE_IN_GB"] = lvm_image_size_in_gb
 
