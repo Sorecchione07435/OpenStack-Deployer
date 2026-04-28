@@ -4,6 +4,8 @@ import logging
 import time
 from dataclasses import dataclass, field
 
+from ...utils.core import colors
+
 MARKER_FILE = "/var/lib/openstack_installer/deploy_complete"
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -19,7 +21,7 @@ class CheckResult:
         return len(self.failed) == 0
 
     def __str__(self):
-        lines = [f"✅ {s}" for s in self.passed] + [f"❌ {s}" for s in self.failed]
+        lines = [f"{colors.GREEN}PASSED:{colors.RESET} {s}" for s in self.passed] + [f"{colors.RED}FAILED:{colors.RESET} {s}" for s in self.failed]
         return "\n".join(lines)
 
 
@@ -46,10 +48,10 @@ def check_endpoint(service_name: str) -> bool:
         )
         return bool(result.stdout.strip())
     except FileNotFoundError:
-        #logger.error("'openstack' CLI not found in PATH")
+
         return False
     except subprocess.TimeoutExpired:
-        #logger.error(f"Timeout checking endpoint: {service_name}")
+
         return False
 
 
@@ -61,7 +63,7 @@ def check_service_active(svc: str) -> bool:
         )
         return result.returncode == 0
     except (FileNotFoundError, subprocess.TimeoutExpired) as e:
-        #logger.error(f"Error checking service {svc}: {e}")
+
         return False
 
 

@@ -3,72 +3,80 @@ import socket
 import ipaddress
 import subprocess
 
+import os
+
 def is_wifi_interface(iface: str) -> bool:
     try:
-        with open(f"/sys/class/net/{iface}/type") as f:
-            return f.read().strip() == "801"
-    except Exception:
-        return False
 
-def get_default_interface_ip():
+        type_path = f"/sys/class/net/{iface}/type"
+        if os.path.exists(type_path):
+            with open(type_path) as f:
+                if f.read().strip() == "801":
+                    return True
+
+        if os.path.exists(f"/sys/class/net/{iface}/wireless"):
+            return True
+
+        with open("/proc/net/wireless") as f:
+            wireless_interfaces = [line.split()[0].strip(":") for line in f.readlines()[2:]]
+            if iface in wireless_interfaces:
+                return True
+    except Exception:
+        pass
+    return False
+
+def get_default_interface_ip() -> str:
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
-        # Non serve che sia raggiungibile davvero
         s.connect(("8.8.8.8", 80))
-        ip = s.getsockname()[0]
+        return s.getsockname()[0]
     finally:
         s.close()
-    return ip
 
-def netmask_to_cidr(netmask):
-    return ipaddress.IPv4Network(f"0.0.0.0/{netmask}").prefixlen
+def get_active_interface() -> tuple[str, str]:
 
-def get_active_interface():
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.connect(("8.8.8.8", 80))
-    ip = s.getsockname()[0]
-    s.close()
-
+    ip = get_default_interface_ip()
     for iface, addrs in psutil.net_if_addrs().items():
         for addr in addrs:
             if addr.family == socket.AF_INET and addr.address == ip:
                 return iface, ip
-            
+    return None, None
 
 def get_network_info():
-    # Trova IP dell'interfaccia di default
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.connect(("8.8.8.8", 80))
-    ip = s.getsockname()[0]
-    s.close()
+    iface, ip = get_active_interface()
+    if not iface:
+        return None
 
-    iface_name = None
-    netmask = None
-    broadcast = None
-    cidr = None
-    gateway = None
-    network_cidr = None  # IP + CIDR
-    network = None       # Network completo tipo 192.168.1.0/24
+    netmask, broadcast = None, None
+    for addr in psutil.net_if_addrs()[iface]:
+        if addr.family == socket.AF_INET:
+            netmask = addr.netmask
+            broadcast = addr.broadcast
+            break
 
-    # Trova interfaccia e netmask
-    for iface, addrs in psutil.net_if_addrs().items():
-        for addr in addrs:
-            if addr.family == socket.AF_INET and addr.address == ip:
-                iface_name = iface
-                netmask = addr.netmask
-                broadcast = addr.broadcast
-                if netmask:
-                    # CIDR numerico
-                    cidr = ipaddress.IPv4Network(f"0.0.0.0/{netmask}").prefixlen
-                    # IP + CIDR
-                    network_cidr = f"{ip}/{cidr}"
-                    # Network completo (subnet)
-                    network = str(ipaddress.IPv4Network(f"{ip}/{netmask}", strict=False))
+    cidr = ipaddress.IPv4Network(f"{ip}/{netmask}", strict=False).prefixlen if netmask else None
+    network_cidr = f"{ip}/{cidr}" if cidr else None
+    network = str(ipaddress.IPv4Network(f"{ip}/{netmask}", strict=False)) if netmask else None
 
     # Trova gateway
-    route = subprocess.check_output("ip route", shell=True).decode()
-    for line in route.splitlines():
-        if line.startswith("default"):
-            gateway = line.split()[2]
+    gateway = None
+    try:
+        route = subprocess.run("ip route", shell=True, capture_output=True, text=True)
+        for line in route.stdout.splitlines():
+            if line.startswith("default"):
+                gateway = line.split()[2]
+                break
+    except Exception:
+        pass
 
-    return iface_name, ip, netmask, cidr, broadcast, gateway, network_cidr, network
+    return {
+        "interface": iface,
+        "ip": ip,
+        "netmask": netmask,
+        "cidr": cidr,
+        "broadcast": broadcast,
+        "gateway": gateway,
+        "network_cidr": network_cidr,
+        "network": network,
+        "is_wifi": is_wifi_interface(iface)
+    }

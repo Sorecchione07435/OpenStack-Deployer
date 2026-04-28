@@ -16,7 +16,7 @@ def run_command(command, message="Processing", width=50):
             text=True 
         )
     except subprocess.CalledProcessError as e:
-        spinner.stop("ERROR", color="red", width=60)
+        spinner.stop("ERROR", color="red", width=50)
         combined_output = ""
         if e.stdout:
             combined_output += e.stdout
@@ -29,7 +29,7 @@ def run_command(command, message="Processing", width=50):
             print(combined_output)
         return False
 
-    spinner.stop("DONE", color="yellow", width=60)
+    spinner.stop("DONE", color="yellow", width=50)
     return True
 
 

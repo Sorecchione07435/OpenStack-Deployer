@@ -4,6 +4,7 @@ from ..utils.core.commands import run_command, run_command_sync
 from ..utils.apt.apt import apt_install, apt_update
 from ..utils.config.parser import parse_config, get, resolve_vars
 from ..utils.config.setter import set_conf_option
+from ..utils.core.system_utils import nc_wait
 from ..utils.core import colors
 
 import urllib.request
@@ -52,13 +53,19 @@ def conf_glance(config):
     "PATH=/usr/bin:/usr/local/bin",
     "glance-manage", "db_sync"
 ]
-    migration_result = run_command(db_migration_cmd, "Configuring Glance...")
+    if not run_command(db_migration_cmd, "Configuring Glance...") : return False
+
     return True
 
-def finalize():
+def finalize(config):
+
+    ip_address = get(config, "network.HOST_IP")
+
     restart_cmd = ["systemctl", "restart", "glance-api"]
 
     if not run_command_sync(restart_cmd) : return False
+
+    if not nc_wait(ip_address, 9292) : return False
 
     return True
 
@@ -82,20 +89,18 @@ def upload_cirros_image(config):
     image_name = "cirros"
     image_file_path = "/tmp/cirros-0.4.0-x86_64-disk.img"
     
-    if not run_command_sync([ "wget", "-O", image_file_path, cirros_image_url]) : return False
+    if not run_command([ "wget", "-O", image_file_path, cirros_image_url], "Downloading a Cirros image...", False, None, 5, 5) : return False
     
     run_command_sync(["openstack", "image", "delete", "cirros"])
 
-    create_cirros_image_cmd = [
-        "glance", "image-create",
-        "--name", image_name,
+    create_image_result = run_command([
+        "openstack", "image", "create",
+        image_name,
         "--file", image_file_path,
         "--disk-format", "qcow2",
         "--container-format", "bare",
-        "--visibility", "public"
-    ]
-
-    create_image_result = run_command(create_cirros_image_cmd, f"Adding cirros image...")
+        "--public"
+        ] , f"Adding cirros image...")
 
     if not create_image_result : return False
     
@@ -110,7 +115,7 @@ def run_setup_glance(config):
      
      if not conf_glance(config): return False
      
-     if not finalize(): return False
+     if not finalize(config): return False
      
      if not upload_cirros_image(config): return False
 

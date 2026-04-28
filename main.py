@@ -43,13 +43,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="Start the OpenStack Deployment"
     )
 
-    deploy_p.add_argument(
+    group = deploy_p.add_mutually_exclusive_group(required=True)
+    
+
+    group.add_argument(
         "--allinone",
         action="store_true",
         help="Runs a complete OpenStack deployment using an automatically generated configuration."
     )
 
-    deploy_p.add_argument(
+    group.add_argument(
         "--config-file",
         help="Path to the configuration file"
     )
@@ -57,21 +60,30 @@ def build_parser() -> argparse.ArgumentParser:
     deploy_p.add_argument(
         "--install-cinder",
         type=str,
+        choices=["yes", "no"],
         default="yes",
-        dest="install_cinder",
-        help="Choosing whether to install the Cinder (Block Storage) service"
+        help="Choosing whether to install Cinder (Block Storage) service (yes/no)"
+    )
+
+    deploy_p.add_argument(
+        "--install-horizon",
+        type=str,
+        choices=["yes", "no"],
+        default="yes",
+        help="Choosing whether to install Horizon (Dashboard) service (yes/no)"
     )
 
     deploy_p.add_argument(
         "--lvm-image-size-in-gb",
         type=int,
         default=5,
-        help="Size of the Cinder LVM image in GB"
+        help="Size of the Cinder LVM image in GB (default: 5)"
     )
 
     deploy_p.add_argument(
         "--neutron-driver",
         type=str,
+        choices=["ovs", "ovn"],
         default="ovs",
         dest="neutron_driver",
         help="The Neutron Driver that will be used to configure networks in OpenStack"
@@ -127,6 +139,11 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 def cmd_generate_config(args):
+
+    dst_dir = os.path.dirname(dst_file)
+    os.makedirs(dst_dir, exist_ok=True)
+    shutil.copy(src_file, dst_file)
+
     src_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "templates/conf_template.yaml")
     dst_file = os.path.join(args.file, "templates/conf_template.yaml") if os.path.isdir(args.file) else args.file
     shutil.copy(src_file, dst_file)
@@ -134,42 +151,27 @@ def cmd_generate_config(args):
 
 def cmd_deploy(args):
 
-    if args.config_file and args.allinone:
-        print(f"{colors.RED}Error: you cannot specify both --allinone and --config-file.{colors.RESET}\n")
-        print("Please choose either --allinone for a full automated deployment")
-        print("or --config-file to use a custom configuration file.")
-        print()
-
-        sys.exit(1)
-
     if args.allinone:
-
         config_file_path = generate_config_file()
-
-        if args.install_cinder == "yes" and (args.neutron_driver == "ovs" or args.neutron_driver == "ovn"):
-            size = args.lvm_image_size_in_gb
-            config_openstack("yes", config_file_path, size if size is not None else 5, args.neutron_driver)
-
-        elif args.install_cinder == "yes":
-            size = args.lvm_image_size_in_gb
-            config_openstack("yes", config_file_path, size if size is not None else 5, 0)
-
-        elif args.neutron_driver == "ovs" or args.neutron_driver == "ovn":
-            config_openstack("no", config_file_path, 0, args.neutron_driver)
-
-        else:
-            config_openstack("no", config_file_path, None, "ovs")
-
-
+        
+        cinder_flag = args.install_cinder
+        horizon_flag = args.install_horizon
+        driver = args.neutron_driver if args.neutron_driver in ("ovs","ovn") else "ovs"
+        
+        lvm_size = args.lvm_image_size_in_gb if cinder_flag == "yes" else 0
+        
+        config_openstack(
+            install_horizon=horizon_flag,
+            install_cinder=cinder_flag,
+            config_file_path=config_file_path,
+            lvm_image_size_in_gb=lvm_size,
+            neutron_driver=driver
+        )
+        
         deploy(config_file_path)
-
-    elif args.config_file:
-        deploy(args.config_file)
     else:
-        print(f"{colors.RED}Error: you must specify either --allinone or --config-file.{colors.RESET}\n")
-        print("To view all available arguments for the openstack install deploy command, run: 'openstack_installer deploy --help'")
-              
-        sys.exit(1)
+        deploy(args.config_file)
+
 
 def cmd_launch(args):
 

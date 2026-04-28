@@ -1,6 +1,7 @@
 from ..utils.core.commands import run_command
 from ..utils.apt.apt import apt_install, apt_update
 from ..utils.config.parser import parse_config, get, resolve_vars
+from ..utils.core.system_utils import nc_wait
 from ..utils.core import colors
 
 import os
@@ -31,11 +32,15 @@ def conf_mariadb(config):
     with open(mysqld_file_path, "w") as f:
         f.write(mysqld_template_content)
 
-def finalize():
+def finalize(config):
+
+    ip_address = get(config, "network.HOST_IP")
      
     restart_cmd = ["systemctl", "restart", "mysql"]
 
     if not run_command(restart_cmd, "Restarting MySQL..") : return False
+
+    if not nc_wait(ip_address, 3306) : return False
 
     return True
 
@@ -90,7 +95,7 @@ def run_setup_mariadb(config):
     
     conf_mariadb(config)
     
-    if not finalize(): return False
+    if not finalize(config): return False
     
     if not create_services_databases(config): return False
 

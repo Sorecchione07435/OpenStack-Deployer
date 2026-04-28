@@ -1,6 +1,7 @@
 from ..utils.core.commands import run_command
 from ..utils.apt.apt import apt_install, apt_update
 from ..utils.config.parser import parse_config, get
+from ..utils.core.system_utils import nc_wait
 from ..utils.core import colors
 
 import subprocess
@@ -52,9 +53,13 @@ def add_rabbitmq_openstack_user(config):
 
 def run_setup_prereqs(config):
 
+    ip_address = get(config, "network.HOST_IP")
+
     set_openstack_release(config)
 
     if not install_pkgs(): return False
+
+    if not nc_wait(ip_address, 5672) : return False
     
     if not add_rabbitmq_openstack_user(config): return False
 

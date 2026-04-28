@@ -2,6 +2,7 @@ from ...utils.core.commands import run_command, run_sync_command_with_retry, run
 from ...utils.apt.apt import apt_install, apt_update
 from ...utils.config.parser import parse_config, get, resolve_vars
 from ...utils.config.setter import set_conf_option
+from ...utils.core.system_utils import nc_wait
 from ...utils.core import colors
 
 import os
@@ -204,13 +205,17 @@ def conf_neutron_ovs(config):
 
     return True
 
-def finalize():
+def finalize(config):
            
     print()
+
+    ip_address = get(config, "network.HOST_IP")
 
     if not run_command(["systemctl", "restart", "nova-api"], "Restarting Nova API service...", False, None, 3, 5): return False
     
     if not run_command(["systemctl", "restart", "neutron-server", "neutron-openvswitch-agent", "neutron-dhcp-agent", "neutron-metadata-agent", "neutron-l3-agent", "nova-compute"], "Restarting Neutron OVS services...", False, None, 3, 5): return False
+
+    if not nc_wait(ip_address, 9696) : return False
 
     return True
 
@@ -348,7 +353,7 @@ def run_setup_ovs_neutron(config):
         
      if not conf_neutron_ovs(config) : return False
      
-     if not finalize() : return False
+     if not finalize(config) : return False
      
      if not create_ovs_networks(config): return False
      return True

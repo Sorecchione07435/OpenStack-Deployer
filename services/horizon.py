@@ -4,6 +4,7 @@ from ..utils.core.commands import run_command, run_sync_command_with_retry, run_
 from ..utils.apt.apt import apt_install, apt_update
 from ..utils.config.parser import parse_config, get, resolve_vars
 from ..utils.config.setter import set_conf_option
+from ..utils.core.system_utils import nc_wait
 from ..utils.core import colors
 
 import os
@@ -106,11 +107,16 @@ Alias /dashboard/static /var/lib/openstack-dashboard/static/
             f.write(apache_block)
 
 
-def finalize():
+def finalize(config):
+
     print()
+
+    ip_address = get(config, "network.HOST_IP")
 
     if not run_command(["systemctl", "restart", "apache2"], "Restarting Apache2..."): return False
     
+    if not nc_wait(ip_address, 80) : return False
+
     return True
 
 def run_setup_horizon(config):
@@ -119,7 +125,7 @@ def run_setup_horizon(config):
 
     conf_horizon(config)
 
-    if not finalize(): return False
+    if not finalize(config): return False
 
     print(f"\n{colors.GREEN}Horizon configured successfully!{colors.RESET}")
     return True

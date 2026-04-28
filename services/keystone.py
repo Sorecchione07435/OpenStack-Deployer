@@ -4,6 +4,7 @@ from ..utils.core.commands import run_command
 from ..utils.apt.apt import apt_install, apt_update
 from ..utils.config.parser import parse_config, get, resolve_vars
 from ..utils.config.setter import set_conf_option
+from ..utils.core.system_utils import nc_wait
 from ..utils.core import colors
 
 import os
@@ -75,14 +76,20 @@ def conf_keystone(config):
     if not bootstrap_result:
         return False
     
+
+    
     return True
     
-def finalize():
+def finalize(config):
+
+    ip_address = get(config, "network.HOST_IP")
 
     message = f"Restarting Apache2..."
     restart_cmd = ["systemctl", "restart", "apache2"]
 
     if not  run_command(restart_cmd, message) : return False
+     
+    if not nc_wait(ip_address, 5000) : return False
 
     return True
     
@@ -277,7 +284,7 @@ def run_setup_keystone(config):
     
     if not conf_keystone(config): return False
     
-    if not finalize(): return False
+    if not finalize(config): return False
     
     if not create_projects_and_demo_user(config): return False
     

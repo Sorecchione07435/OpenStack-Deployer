@@ -1,8 +1,27 @@
 
 import random
 import string
+import socket
+from time import sleep, time
+
+from . import colors
 
 import subprocess
+
+def nc_wait(addr: str, port: int, timeout: int = 30) -> bool:
+
+    start_time = time()
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    
+    while True:
+        if sock.connect_ex((addr, port)) == 0:
+            sock.close()
+            return True
+        elif time() - start_time > timeout:
+            print(f"{colors.RED}ERROR:{colors.RESET} Service at {addr}:{port} did not respond within {timeout} seconds.")
+            sock.close()
+            return False
+        sleep(1)
 
 def has_hw_virtualization():
     try:

@@ -4,6 +4,7 @@ from ..utils.core.commands import run_command, run_sync_command_with_retry, run_
 from ..utils.apt.apt import apt_install, apt_update
 from ..utils.config.parser import parse_config, get, resolve_vars
 from ..utils.config.setter import set_conf_option
+from ..utils.core.system_utils import nc_wait
 from ..utils.core import colors
 
 import os
@@ -112,12 +113,16 @@ def conf_nova(config):
     
     return True
 
-def finalize():
+def finalize(config):
+
+    ip_address = get(config, "network.HOST_IP")
      
     print()
 
     if not run_command(["systemctl", "restart", "nova-api", "nova-scheduler", "nova-conductor", "nova-novncproxy"], "Restarting Nova services..."): return False
     
+    if not nc_wait(ip_address, 8774) : return False
+
     return True
 
 def add_default_keypair(config):
@@ -158,7 +163,7 @@ def run_setup_nova(config):
      
      if not conf_nova(config): return False
      
-     if not finalize(): return False
+     if not finalize(config): return False
      
      if not add_default_keypair(config): return False
      

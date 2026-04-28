@@ -97,7 +97,7 @@ def conf_neutron(config):
     return True
 
 def finalize():
-           
+
     print()
 
     if not run_command(["systemctl", "restart", "nova-api"], "Restarting Nova API service...", False, None, 3, 5): return False

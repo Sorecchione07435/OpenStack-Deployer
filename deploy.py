@@ -57,36 +57,36 @@ def deploy(config_file):
 
     print("OpenStack Deployment Started\n")
     
-    print("Setting up prerequirements... \n")
+    print("Setting up prerequirements\n")
     if not run_setup_prereqs(config):  return False
 
-    print("Setting up MariaDB... \n")
+    print("Setting up MariaDB\n")
     if not run_setup_mariadb(config): return False
 
-    print("Setting up Keystone... \n")
+    print("Setting up Keystone\n")
     if not run_setup_keystone(config): return False
 
-    print("Setting up Glance... \n")
+    print("Setting up Glance\n")
     if not run_setup_glance(config): return False
     
     if install_cinder:
-        print("Setting up Cinder... \n")
+        print("Setting up Cinder\n")
         if not run_setup_cinder(config): return False
         
-    print("Setting up Placement... \n")
+    print("Setting up Placement\n")
     if not run_setup_placement(config): return False
     
-    print("Setting up Nova... \n")
+    print("Setting up Nova\n")
     if not run_setup_nova(config): return False
     
-    print("Setting up a Compute Node... \n")
+    print("Setting up a Compute Node\n")
     if not run_setup_nova_compute(config): return False
 
-    print("Setting up Neutron... \n")
+    print("Setting up Neutron\n")
     if not run_setup_neutron(config): return False
     
     if install_horizon:
-        print("Setting up Horizon...\n")
+        print("Setting up Horizon\n")
         if not run_setup_horizon(config): return False
     
     print(f"\n*** {colors.GREEN}OpenStack Deployment Completed Successfully!{colors.RESET} ***")

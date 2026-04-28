@@ -2,6 +2,7 @@ from ...utils.core.commands import run_command, run_sync_command_with_retry, run
 from ...utils.apt.apt import apt_install, apt_update
 from ...utils.config.parser import parse_config, get, resolve_vars
 from ...utils.config.setter import set_conf_option
+from ...utils.core.system_utils import nc_wait
 from ...utils.core import colors
 
 import os
@@ -302,6 +303,8 @@ def finalize(config):
     with open("/etc/udev/rules.d/99-openvswitch.rules", "w") as f:
         f.write(udev_rule)
     run_command_sync(["udevadm", "control", "--reload-rules"])
+
+    if not nc_wait(ip_address, 9696) : return False
 
     return True
 

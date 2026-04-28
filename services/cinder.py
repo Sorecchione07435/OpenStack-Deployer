@@ -4,6 +4,7 @@ from ..utils.core.commands import run_command, run_sync_command_with_retry, run_
 from ..utils.apt.apt import apt_install, apt_update
 from ..utils.config.parser import parse_config, get, resolve_vars
 from ..utils.config.setter import set_conf_option
+from ..utils.core.system_utils import nc_wait
 from ..utils.core import colors
 
 import pwd
@@ -232,12 +233,16 @@ def conf_cinder(config):
     
     return True
 
-def finalize():
+def finalize(config):
+
+    ip_address = get(config, "network.HOST_IP")
 
     print()
 
     if not run_command(["systemctl", "restart", "cinder-scheduler", "cinder-volume", "apache2", "tgt"], "Restarting Cinder services...", False, None, 3, 5): return False
     
+    if not nc_wait(ip_address, 8776) : return False
+
     return True
 
 def run_setup_cinder(config):
@@ -252,7 +257,7 @@ def run_setup_cinder(config):
     
     if not conf_cinder(config): return False
     
-    if not finalize(): return False
+    if not finalize(config): return False
     
     print(f"\n{colors.GREEN}Cinder configured successfully!{colors.RESET}\n")
     return True
